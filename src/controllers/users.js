@@ -72,6 +72,58 @@ const userController = {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     },
+
+    getUserAchievements: async (req, res) => {
+        try {
+            const userId = parseInt(req.params.id);
+
+            //  TODO: Проверка, существует ли пользователь с таким ID
+
+            //  Логика получения достижений пользователя из базы данных
+            const achievements = await Achievement.findAll({ where: { user_id: userId } }); //  Используйте вашу модель Achievement
+
+            res.json(achievements);
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    },
+
+    getUserApplications: async (req, res) => {
+        try {
+            const userId = parseInt(req.params.id);
+
+            //  TODO: Проверка, существует ли пользователь с таким ID
+
+            const applications = await Application.findAll({
+                where: { user_id: userId },
+                include: [Event, Team] //  Пример: Подгрузка данных о событии и команде
+            }); //  Используйте вашу модель Application
+
+            res.json(applications);
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    },
+
+    getUserAchievements: async (req, res) => {
+        try {
+            const userId = parseInt(req.params.id);
+
+            const achievements = await Achievement.findAll({
+                where: { user_id: userId },
+                include: [Event]  //  Пример: Подгрузка данных о событии
+            });
+
+            res.json(achievements);
+
+        } catch (error) {
+            //  ...
+        }
+    },
 };
 
 module.exports = userController;

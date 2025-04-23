@@ -4,13 +4,32 @@ const { validateEvent } = require('../utils/validation');
 const eventController = {
     getAllEvents: async (req, res) => {
         try {
-            const events = await Event.getAll();
+            const { region, startDate, endDate, format } = req.query;
+            const whereClause = {};
+
+            if (region) {
+                whereClause.region = region;
+            }
+            if (startDate) {
+                whereClause.start_date = { [Op.gte]: new Date(startDate) }; //  Op.gte (>=) - оператор Sequelize (или аналог вашей ORM)
+            }
+            if (endDate) {
+                whereClause.end_date = { [Op.lte]: new Date(endDate) }; //  Op.lte (<=)
+            }
+            if (format) {
+                whereClause.format = format;
+            }
+
+            const events = await Event.findAll({ where: whereClause }); //  Используйте вашу модель Event
+
             res.json(events);
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     },
+
 
     getEventById: async (req, res) => {
         try {
@@ -67,6 +86,68 @@ const eventController = {
             const id = parseInt(req.params.id);
             await Event.delete(id);
             res.status(204).send();
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    },
+
+    createEventResults: async (req, res) => {
+        try {
+            const eventId = parseInt(req.params.id);
+            const results = req.body; //  Массив объектов с результатами
+
+            //  Валидация данных
+            if (!Array.isArray(results) || results.length === 0) {
+                return res.status(400).json({ error: 'Results must be an array and not empty' });
+            }
+
+            for (const result of results) {
+                if (!result.user_id || !result.place) { //  Минимальная валидация
+                    return res.status(400).json({ error: 'Each result must have user_id and place' });
+                }
+                //  TODO: Более строгая валидация (проверка типов, существование user_id, team_id и т.д.)
+            }
+
+            //  Проверка, что пользователь имеет права на добавление результатов (organizer, admin)
+            //  Предполагается, что authMiddleware.authorizeRole уже это сделал
+
+            //  Логика сохранения результатов в базу данных
+            try {
+                for (const result of results) {
+                    await Result.create({ event_id: eventId, ...result }); //  Используйте вашу модель Result
+                    //  TODO: Обновление достижений пользователей (после сохранения результатов)
+                    //  Это может быть вызов другой функции, отправка сообщения в очередь и т.д.
+                }
+            } catch (dbError) {
+                console.error('Database error:', dbError);
+                return res.status(500).json({ error: 'Error saving results to database' });
+            }
+
+            for (const result of results) {
+                await Result.create({ event_id: eventId, ...result });
+            
+                //  Вычисление достижения
+                let achievementType = "Участник"; //  По умолчанию
+                if (result.place === 1) {
+                    achievementType = "Победитель";
+                } else if (result.place <= 3) {
+                    achievementType = "Призер";
+                }
+            
+                //  Создание достижения
+                if (achievementType) {
+                    await Achievement.create({
+                        user_id: result.user_id,
+                        event_id: eventId,
+                        achievement_type: achievementType,
+                        description: `<span class="math-inline">\{achievementType\} в соревновании '</span>{eventName}'`, //  TODO: Получить eventName
+                    });
+                }
+            }
+
+            res.status(201).json({ message: 'Results created successfully' });
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
