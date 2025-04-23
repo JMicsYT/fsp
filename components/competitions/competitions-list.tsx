@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Users } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import api from '@/lib/db';
 
 // Type for competition
 interface Competition {
@@ -62,7 +63,7 @@ export function CompetitionsList() {
         if (toDate) queryParams.append("toDate", toDate)
 
         // Make the API request
-        const url = `/api/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
         const response = await fetch(url)
 
         if (response.ok) {
