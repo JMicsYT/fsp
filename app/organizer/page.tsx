@@ -1,8 +1,9 @@
-import type { Metadata } from "next"
-import { OrganizerDashboard } from "@/components/organizer/organizer-dashboard"
+// app/organizer/page.tsx
+import { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
+import { OrganizerDashboard } from "@/components/organizer/organizer-dashboard"
 
 export const metadata: Metadata = {
   title: "Панель организатора | СЦР",
@@ -11,10 +12,8 @@ export const metadata: Metadata = {
 
 export default async function OrganizerPage() {
   const session = await getServerSession(authOptions)
-
-  if (!session || session.user.role !== "ORGANIZER") {
+  if (!session) {
     redirect("/auth/login?callbackUrl=/organizer")
   }
-
   return <OrganizerDashboard userId={session.user.id} />
 }

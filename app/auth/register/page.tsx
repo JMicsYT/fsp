@@ -1,106 +1,30 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import bcrypt from "bcryptjs"
 
-// List of Russian regions
-const russianRegions = [
-  "Москва",
-  "Санкт-Петербург",
-  "Республика Адыгея",
-  "Республика Алтай",
-  "Республика Башкортостан",
-  "Республика Бурятия",
-  "Республика Дагестан",
-  "Республика Ингушетия",
-  "Кабардино-Балкарская Республика",
-  "Республика Калмыкия",
-  "Карачаево-Черкесская Республика",
-  "Республика Карелия",
-  "Республика Коми",
-  "Республика Крым",
-  "Республика Марий Эл",
-  "Республика Мордовия",
-  "Республика Саха (Якутия)",
-  "Республика Северная Осетия — Алания",
-  "Республика Татарстан",
-  "Республика Тыва",
-  "Удмуртская Республика",
-  "Республика Хакасия",
-  "Чеченская Республика",
-  "Чувашская Республика",
-  "Алтайский край",
-  "Забайкальский край",
-  "Камчатский край",
-  "Краснодарский край",
-  "Красноярский край",
-  "Пермский край",
-  "Приморский край",
-  "Ставропольский край",
-  "Хабаровский край",
-  "Амурская область",
-  "Архангельская область",
-  "Астраханская область",
-  "Белгородская область",
-  "Брянская область",
-  "Владимирская область",
-  "Волгоградская область",
-  "Вологодская область",
-  "Воронежская область",
-  "Ивановская область",
-  "Иркутская область",
-  "Калининградская область",
-  "Калужская область",
-  "Кемеровская область",
-  "Кировская область",
-  "Костромская область",
-  "Курганская область",
-  "Курская область",
-  "Ленинградская область",
-  "Липецкая область",
-  "Магаданская область",
-  "Московская область",
-  "Мурманская область",
-  "Нижегородская область",
-  "Новгородская область",
-  "Новосибирская область",
-  "Омская область",
-  "Оренбургская область",
-  "Орловская область",
-  "Пензенская область",
-  "Псковская область",
-  "Ростовская область",
-  "Рязанская область",
-  "Самарская область",
-  "Саратовская область",
-  "Сахалинская область",
-  "Свердловская область",
-  "Смоленская область",
-  "Тамбовская область",
-  "Тверская область",
-  "Томская область",
-  "Тульская область",
-  "Тюменская область",
-  "Ульяновская область",
-  "Челябинская область",
-  "Ярославская область",
-  "Севастополь",
-  "Еврейская автономная область",
-  "Ненецкий автономный округ",
-  "Ханты-Мансийский автономный округ — Югра",
-  "Чукотский автономный округ",
-  "Ямало-Ненецкий автономный округ",
-]
+const russianRegions = ["Москва", "Санкт-Петербург", "Татарстан", "Башкортостан"]
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -111,10 +35,10 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "ATHLETE", // Default role
+    role: "ATHLETE",
     region: "",
     organization: "",
-    phone: "",
+    phone: ""
   })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +57,7 @@ export default function RegisterPage() {
       toast({
         title: "Ошибка",
         description: "Пароли не совпадают",
-        variant: "destructive",
+        variant: "destructive"
       })
       return
     }
@@ -141,46 +65,27 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      // Hash password
-      const hashedPassword = await bcrypt.hash(formData.password, 10)
-
-      // Create user
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          password: hashedPassword,
-        }),
+      const response = await api.post("/auth/register", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        region: formData.region,
+        organization: formData.organization,
+        phone: formData.phone
       })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        let errorMessage = "Не удалось зарегистрироваться"
-
-        try {
-          const jsonError = JSON.parse(errorData)
-          errorMessage = jsonError.error || errorMessage
-        } catch (e) {
-          console.error("Error parsing error response:", errorData)
-        }
-
-        throw new Error(errorMessage)
-      }
 
       toast({
         title: "Успешно",
-        description: "Регистрация прошла успешно. Теперь вы можете войти в систему.",
+        description: "Регистрация прошла успешно!",
       })
+
       router.push("/auth/login")
     } catch (error: any) {
-      console.error("Error registering:", error)
       toast({
         title: "Ошибка",
-        description: error.message || "Не удалось зарегистрироваться",
-        variant: "destructive",
+        description: error?.response?.data?.error || "Что-то пошло не так",
+        variant: "destructive"
       })
     } finally {
       setIsLoading(false)
@@ -192,61 +97,30 @@ export default function RegisterPage() {
       <Card className="mx-auto max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Регистрация</CardTitle>
-          <CardDescription>Создайте аккаунт для участия в соревнованиях</CardDescription>
+          <CardDescription>Создайте аккаунт</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">ФИО</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Введите ваше полное имя"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-              />
+              <Label htmlFor="name">Имя</Label>
+              <Input name="name" value={formData.name} onChange={handleInputChange} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Введите ваш email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
+              <Input type="email" name="email" value={formData.email} onChange={handleInputChange} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Пароль</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Введите пароль"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-              />
+              <Input type="password" name="password" value={formData.password} onChange={handleInputChange} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Подтверждение пароля</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Подтвердите пароль"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                required
-              />
+              <Label htmlFor="confirmPassword">Повторите пароль</Label>
+              <Input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Роль</Label>
-              <Select value={formData.role} onValueChange={(value) => handleSelectChange("role", value)}>
-                <SelectTrigger id="role">
+              <Label>Роль</Label>
+              <Select value={formData.role} onValueChange={(val) => handleSelectChange("role", val)}>
+                <SelectTrigger>
                   <SelectValue placeholder="Выберите роль" />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,51 +130,35 @@ export default function RegisterPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="region">Регион</Label>
-              <Select value={formData.region} onValueChange={(value) => handleSelectChange("region", value)}>
-                <SelectTrigger id="region">
+              <Label>Регион</Label>
+              <Select value={formData.region} onValueChange={(val) => handleSelectChange("region", val)}>
+                <SelectTrigger>
                   <SelectValue placeholder="Выберите регион" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
+                <SelectContent>
                   {russianRegions.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region}
-                    </SelectItem>
+                    <SelectItem key={region} value={region}>{region}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="organization">Организация</Label>
-              <Input
-                id="organization"
-                name="organization"
-                placeholder="Введите вашу организацию"
-                value={formData.organization}
-                onChange={handleInputChange}
-              />
+              <Input name="organization" value={formData.organization} onChange={handleInputChange} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Телефон</Label>
-              <Input
-                id="phone"
-                name="phone"
-                placeholder="Введите ваш телефон"
-                value={formData.phone}
-                onChange={handleInputChange}
-              />
+              <Input name="phone" value={formData.phone} onChange={handleInputChange} />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Регистрация..." : "Зарегистрироваться"}
             </Button>
-            <div className="mt-4 text-center text-sm">
+            <p className="mt-4 text-center text-sm">
               Уже есть аккаунт?{" "}
-              <Link href="/auth/login" className="text-primary underline-offset-4 hover:underline">
-                Войти
-              </Link>
-            </div>
+              <Link href="/auth/login" className="text-primary underline">Войти</Link>
+            </p>
           </CardFooter>
         </form>
       </Card>

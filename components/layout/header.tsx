@@ -5,13 +5,14 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { UserNav } from "@/components/user-nav"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const navigation = [
     { name: "Главная", href: "/" },
@@ -44,8 +45,28 @@ export function Header() {
         </div>
         <div className="flex items-center gap-2">
           <ModeToggle />
-          <div className="hidden md:flex">
-            <UserNav />
+          <div className="hidden md:flex items-center gap-2">
+            {session?.user ? (
+              <>
+                <Link href="/profile">
+                  <Button variant="default" size="sm">
+                    {session.user.name || session.user.email}
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>
+                  Выйти
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="outline" size="sm">Войти</Button>
+                </Link>
+                <Link href="/auth/register">
+                  <Button variant="default" size="sm">Регистрация</Button>
+                </Link>
+              </>
+            )}
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
@@ -68,8 +89,32 @@ export function Header() {
                     {item.name}
                   </Link>
                 ))}
-                <div className="mt-4">
-                  <UserNav />
+                <div className="mt-4 flex flex-col gap-2">
+                  {session?.user ? (
+                    <>
+                      <Link href="/profile">
+                        <Button className="w-full">
+                          {session.user.name || session.user.email}
+                        </Button>
+                      </Link>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                      >
+                        Выйти
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/auth/login">
+                        <Button className="w-full mb-2">Войти</Button>
+                      </Link>
+                      <Link href="/auth/register">
+                        <Button className="w-full">Регистрация</Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </nav>
             </SheetContent>

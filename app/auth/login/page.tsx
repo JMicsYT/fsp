@@ -1,26 +1,29 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
+    password: ""
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,45 +35,47 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: formData.email,
-        password: formData.password,
-      })
+    const result = await signIn("credentials", {
+      redirect: false,
+      email: formData.email,
+      password: formData.password,
+    })
 
-      if (result?.error) {
-        toast({
-          title: "Ошибка входа",
-          description: "Неверный email или пароль",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Успешный вход",
-          description: "Вы успешно вошли в систему",
-        })
-        router.push(callbackUrl)
-        router.refresh()
-      }
-    } catch (error) {
-      console.error("Login error:", error)
+    if (result?.error) {
       toast({
-        title: "Ошибка",
-        description: "Произошла ошибка при входе",
+        title: "Ошибка входа",
+        description: "Неверный email или пароль",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
+    } else {
+      try {
+        const res = await fetch("/api/auth/session")
+        const session = await res.json()
+        const role = session?.user?.role
+
+        toast({
+          title: "Успешный вход",
+          description: "Добро пожаловать!",
+        })
+
+        if (role === "ATHLETE") router.push("/profile/athlete")
+        else if (role === "ORGANIZER") router.push("/profile/organizer")
+        else if (role === "ADMIN") router.push("/profile/admin")
+        else router.push("/profile")
+      } catch (e) {
+        router.push("/profile")
+      }
     }
+
+    setIsLoading(false)
   }
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+    <div className="container flex h-screen items-center justify-center">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+        <CardHeader>
           <CardTitle className="text-2xl font-bold">Вход в систему</CardTitle>
-          <CardDescription>Введите свои данные для входа</CardDescription>
+          <CardDescription>Введите свои учетные данные</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -81,38 +86,34 @@ export default function LoginPage() {
                 name="email"
                 type="email"
                 placeholder="example@example.com"
-                required
                 value={formData.email}
                 onChange={handleChange}
+                required
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Пароль</Label>
-                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                  Забыли пароль?
-                </Link>
-              </div>
+              <Label htmlFor="password">Пароль</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                required
+                placeholder="Введите пароль"
                 value={formData.password}
                 onChange={handleChange}
+                required
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col gap-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Вход..." : "Войти"}
             </Button>
-            <div className="text-center text-sm">
+            <p className="text-sm text-center">
               Нет аккаунта?{" "}
-              <Link href="/auth/register" className="text-primary hover:underline">
+              <Link href="/auth/register" className="text-primary underline">
                 Зарегистрироваться
               </Link>
-            </div>
+            </p>
           </CardFooter>
         </form>
       </Card>

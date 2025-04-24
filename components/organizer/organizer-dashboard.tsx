@@ -1,78 +1,183 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { OrganizerCompetitions } from "@/components/organizer/organizer-competitions"
-import { OrganizerRegistrations } from "@/components/organizer/organizer-registrations"
-import { OrganizerCreateCompetition } from "@/components/organizer/organizer-create-competition"
-import { OrganizerStats } from "@/components/organizer/organizer-stats"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Calendar, Users, Edit, Eye, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 
-interface OrganizerDashboardProps {
-  userId: string
+interface Competition {
+  id: string
+  title: string
+  type: "OPEN" | "REGIONAL" | "FEDERAL"
+  discipline: string
+  eventStart: string
+  eventEnd: string
+  registrationCount: number
 }
 
-export function OrganizerDashboard({ userId }: OrganizerDashboardProps) {
-  const [activeTab, setActiveTab] = useState("competitions")
+export function OrganizerDashboard({ userId }: { userId: string }) {
+  const [items, setItems] = useState<Competition[]>([])
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalCompetitions: 0,
-    activeCompetitions: 0,
-    totalRegistrations: 0,
-    pendingRegistrations: 0,
-  })
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchList = async () => {
       try {
-        const response = await fetch(`/api/organizer/stats?userId=${userId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        }
-      } catch (error) {
-        console.error("Error fetching stats:", error)
+        setLoading(true)
+        const res = await fetch(
+          `/api/organizer/competitions?organizerId=${encodeURIComponent(
+            userId
+          )}`,
+          { cache: "no-store" }
+        )
+        if (!res.ok) throw new Error(`Status ${res.status}`)
+        const data: Competition[] = await res.json()
+        setItems(data)
+      } catch (err) {
+        console.error(err)
         toast({
           title: "Ошибка",
-          description: "Не удалось загрузить статистику",
+          description: "Не удалось загрузить соревнования",
           variant: "destructive",
         })
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
-
-    fetchStats()
+    fetchList()
   }, [userId, toast])
 
-  return (
-    <div className="container px-4 py-8 md:px-6 md:py-12">
-      <div className="flex flex-col gap-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Панель организатора</h1>
-          <p className="text-muted-foreground">Управление соревнованиями и регистрациями участников</p>
-        </div>
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/competitions/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error()
+      setItems((prev) => prev.filter((c) => c.id !== id))
+      toast({ title: "Соревнование удалено" })
+    } catch {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить соревнование",
+        variant: "destructive",
+      })
+    }
+  }
 
-        <OrganizerStats stats={stats} isLoading={isLoading} />
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="competitions">Мои соревнования</TabsTrigger>
-            <TabsTrigger value="registrations">Заявки на участие</TabsTrigger>
-            <TabsTrigger value="create">Создать соревнование</TabsTrigger>
-          </TabsList>
-          <TabsContent value="competitions" className="mt-6">
-            <OrganizerCompetitions userId={userId} />
-          </TabsContent>
-          <TabsContent value="registrations" className="mt-6">
-            <OrganizerRegistrations userId={userId} />
-          </TabsContent>
-          <TabsContent value="create" className="mt-6">
-            <OrganizerCreateCompetition userId={userId} onSuccess={() => setActiveTab("competitions")} />
-          </TabsContent>
-        </Tabs>
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
       </div>
-    </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground">
+        У вас пока нет соревнований
+        <div className="mt-4">
+          <Link href="/competitions/create">
+            <Button>Создать соревнование</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Название</TableHead>
+          <TableHead>Тип</TableHead>
+          <TableHead>Дисциплина</TableHead>
+          <TableHead>Дата</TableHead>
+          <TableHead>Участники</TableHead>
+          <TableHead className="text-right">Действия</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((c) => (
+          <TableRow key={c.id}>
+            <TableCell>{c.title}</TableCell>
+            <TableCell>{c.type}</TableCell>
+            <TableCell>{c.discipline}</TableCell>
+            <TableCell>
+              <Calendar className="inline-block mr-1 h-4 w-4 text-muted-foreground" />
+              {new Date(c.eventStart).toLocaleDateString()}–{" "}
+              {new Date(c.eventEnd).toLocaleDateString()}
+            </TableCell>
+            <TableCell>
+              <Users className="inline-block mr-1 h-4 w-4 text-muted-foreground" />
+              {c.registrationCount}
+            </TableCell>
+            <TableCell className="text-right space-x-2">
+              <Link href={`/competitions/${c.id}`}>
+                <Button size="icon" variant="ghost" title="Просмотр">
+                  <Eye size={16} />
+                </Button>
+              </Link>
+              <Link href={`/competitions/${c.id}/edit`}>
+                <Button size="icon" variant="ghost" title="Редактировать">
+                  <Edit size={16} />
+                </Button>
+              </Link>
+
+              {/* Правильная структура AlertDialog */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="icon" variant="ghost" title="Удалить">
+                    <Trash2 size={16} />
+                  </Button>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Удалить соревнование?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Это действие нельзя отменить. Все данные будут
+                      безвозвратно удалены.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground"
+                      onClick={() => handleDelete(c.id)}
+                    >
+                      Удалить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

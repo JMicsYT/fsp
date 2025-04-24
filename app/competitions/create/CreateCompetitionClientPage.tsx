@@ -1,15 +1,27 @@
+// app/competitions/create/CreateCompetitionClientPage.tsx
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -33,9 +45,9 @@ export default function CreateCompetitionClientPage() {
     discipline: "",
     region: "",
     registrationStart: new Date(),
-    registrationEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 days
-    eventStart: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 days
-    eventEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // +15 days
+    registrationEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    eventStart: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    eventEnd: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
     maxParticipants: "",
     teamSize: "3",
     description: "",
@@ -44,7 +56,9 @@ export default function CreateCompetitionClientPage() {
     contacts: "",
   })
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -60,6 +74,8 @@ export default function CreateCompetitionClientPage() {
   }
 
   const handleSubmit = async () => {
+    console.log("📝 handleSubmit called", { formData, session })
+
     if (!session?.user?.id) {
       toast({
         title: "Ошибка",
@@ -79,7 +95,6 @@ export default function CreateCompetitionClientPage() {
       })
       return
     }
-
     if (!formData.description || !formData.rules) {
       setActiveTab("details")
       toast({
@@ -95,29 +110,31 @@ export default function CreateCompetitionClientPage() {
     try {
       const response = await fetch("/api/competitions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          maxParticipants: formData.maxParticipants ? Number.parseInt(formData.maxParticipants) : null,
+          maxParticipants: formData.maxParticipants
+            ? parseInt(formData.maxParticipants)
+            : null,
           organizerId: session.user.id,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        toast({
-          title: "Успешно",
-          description: "Соревнование успешно создано",
-        })
-        router.push(`/competitions/${data.id}`)
-      } else {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to create competition")
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || "Ошибка при создании соревнования")
       }
+
+      const created = await response.json()
+
+      toast({
+        title: "Успешно",
+        description: "Соревнование успешно создано",
+      })
+
+      router.push(`/competitions/${created.id}`)
     } catch (error: any) {
-      console.error("Error creating competition:", error)
+      console.error("❌ Error creating competition:", error)
       toast({
         title: "Ошибка",
         description: error.message || "Не удалось создать соревнование",
@@ -133,12 +150,16 @@ export default function CreateCompetitionClientPage() {
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Создание соревнования</h1>
-          <p className="text-muted-foreground">Заполните форму для создания нового соревнования</p>
+          <p className="text-muted-foreground">
+            Заполните форму для создания нового соревнования
+          </p>
         </div>
         <Card>
           <CardHeader>
             <CardTitle>Информация о соревновании</CardTitle>
-            <CardDescription>Заполните все обязательные поля для создания соревнования</CardDescription>
+            <CardDescription>
+              Заполните все обязательные поля для создания соревнования
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
@@ -147,7 +168,9 @@ export default function CreateCompetitionClientPage() {
                 <TabsTrigger value="dates">Даты и ограничения</TabsTrigger>
                 <TabsTrigger value="details">Детали и правила</TabsTrigger>
               </TabsList>
+
               <TabsContent value="general" className="space-y-4 pt-4">
+                {/* Общая информация */}
                 <div className="space-y-2">
                   <Label htmlFor="title">Название соревнования *</Label>
                   <Input
@@ -161,7 +184,10 @@ export default function CreateCompetitionClientPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Тип соревнования *</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(v) => handleSelectChange("type", v)}
+                  >
                     <SelectTrigger id="type">
                       <SelectValue placeholder="Выберите тип соревнования" />
                     </SelectTrigger>
@@ -176,23 +202,32 @@ export default function CreateCompetitionClientPage() {
                   <Label htmlFor="discipline">Дисциплина *</Label>
                   <Select
                     value={formData.discipline}
-                    onValueChange={(value) => handleSelectChange("discipline", value)}
+                    onValueChange={(v) => handleSelectChange("discipline", v)}
                   >
                     <SelectTrigger id="discipline">
                       <SelectValue placeholder="Выберите дисциплину" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Алгоритмическое программирование">Алгоритмическое программирование</SelectItem>
+                      <SelectItem value="Алгоритмическое программирование">
+                        Алгоритмическое программирование
+                      </SelectItem>
                       <SelectItem value="Веб-разработка">Веб-разработка</SelectItem>
                       <SelectItem value="Мобильная разработка">Мобильная разработка</SelectItem>
-                      <SelectItem value="Искусственный интеллект">Искусственный интеллект</SelectItem>
-                      <SelectItem value="Командное программирование">Командное программирование</SelectItem>
+                      <SelectItem value="Искусственный интеллект">
+                        Искусственный интеллект
+                      </SelectItem>
+                      <SelectItem value="Командное программирование">
+                        Командное программирование
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="region">Регион *</Label>
-                  <Select value={formData.region} onValueChange={(value) => handleSelectChange("region", value)}>
+                  <Select
+                    value={formData.region}
+                    onValueChange={(v) => handleSelectChange("region", v)}
+                  >
                     <SelectTrigger id="region">
                       <SelectValue placeholder="Выберите регион" />
                     </SelectTrigger>
@@ -208,20 +243,22 @@ export default function CreateCompetitionClientPage() {
                   </Select>
                 </div>
               </TabsContent>
+
               <TabsContent value="dates" className="space-y-4 pt-4">
+                {/* Даты и ограничения */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Дата начала регистрации *</Label>
                     <DatePickerDemo
                       date={formData.registrationStart}
-                      onSelect={(date) => handleDateChange("registrationStart", date)}
+                      onSelect={(d) => handleDateChange("registrationStart", d)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Дата окончания регистрации *</Label>
                     <DatePickerDemo
                       date={formData.registrationEnd}
-                      onSelect={(date) => handleDateChange("registrationEnd", date)}
+                      onSelect={(d) => handleDateChange("registrationEnd", d)}
                     />
                   </div>
                 </div>
@@ -230,12 +267,15 @@ export default function CreateCompetitionClientPage() {
                     <Label>Дата начала соревнования *</Label>
                     <DatePickerDemo
                       date={formData.eventStart}
-                      onSelect={(date) => handleDateChange("eventStart", date)}
+                      onSelect={(d) => handleDateChange("eventStart", d)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Дата окончания соревнования *</Label>
-                    <DatePickerDemo date={formData.eventEnd} onSelect={(date) => handleDateChange("eventEnd", date)} />
+                    <DatePickerDemo
+                      date={formData.eventEnd}
+                      onSelect={(d) => handleDateChange("eventEnd", d)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -243,9 +283,9 @@ export default function CreateCompetitionClientPage() {
                   <Input
                     id="maxParticipants"
                     name="maxParticipants"
+                    type="number"
                     value={formData.maxParticipants}
                     onChange={handleInputChange}
-                    type="number"
                     placeholder="Введите максимальное количество участников"
                   />
                 </div>
@@ -254,15 +294,15 @@ export default function CreateCompetitionClientPage() {
                   <Input
                     id="teamSize"
                     name="teamSize"
+                    type="number"
                     value={formData.teamSize}
                     onChange={handleInputChange}
-                    type="number"
-                    placeholder="Введите размер команды"
-                    defaultValue="3"
                   />
                 </div>
               </TabsContent>
+
               <TabsContent value="details" className="space-y-4 pt-4">
+                {/* Детали и правила */}
                 <div className="space-y-2">
                   <Label htmlFor="description">Описание соревнования *</Label>
                   <Textarea
@@ -270,8 +310,8 @@ export default function CreateCompetitionClientPage() {
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Введите описание соревнования"
                     rows={5}
+                    placeholder="Введите описание соревнования"
                   />
                 </div>
                 <div className="space-y-2">
@@ -281,8 +321,8 @@ export default function CreateCompetitionClientPage() {
                     name="rules"
                     value={formData.rules}
                     onChange={handleInputChange}
-                    placeholder="Введите правила соревнования"
                     rows={5}
+                    placeholder="Введите правила соревнования"
                   />
                 </div>
                 <div className="space-y-2">
@@ -292,24 +332,27 @@ export default function CreateCompetitionClientPage() {
                     name="prizes"
                     value={formData.prizes}
                     onChange={handleInputChange}
-                    placeholder="Опишите призы и награды"
                     rows={3}
+                    placeholder="Опишите призы и награды"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contacts">Контактная информация организаторов *</Label>
+                  <Label htmlFor="contacts">
+                    Контактная информация организаторов *
+                  </Label>
                   <Textarea
                     id="contacts"
                     name="contacts"
                     value={formData.contacts}
                     onChange={handleInputChange}
-                    placeholder="Введите контактную информацию"
                     rows={2}
+                    placeholder="Введите контактную информацию"
                   />
                 </div>
               </TabsContent>
             </Tabs>
           </CardContent>
+
           <CardFooter className="flex justify-between">
             <Button variant="outline" onClick={() => router.back()}>
               Отмена
@@ -324,13 +367,22 @@ export default function CreateCompetitionClientPage() {
   )
 }
 
-function DatePickerDemo({ date, onSelect }: { date?: Date; onSelect?: (date: Date | undefined) => void }) {
+function DatePickerDemo({
+  date,
+  onSelect,
+}: {
+  date?: Date
+  onSelect?: (date: Date | undefined) => void
+}) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
-          className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? format(date, "PPP", { locale: ru }) : "Выберите дату"}

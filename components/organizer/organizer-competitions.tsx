@@ -1,22 +1,30 @@
+// components/organizer/organizer-competitions.tsx
 "use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Calendar, MapPin, Users, Edit, Trash2, Eye } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Calendar, Users, Edit, Eye, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
+  AlertDialogTrigger,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 
 interface Competition {
@@ -24,243 +32,148 @@ interface Competition {
   title: string
   type: "OPEN" | "REGIONAL" | "FEDERAL"
   discipline: string
-  region: string
-  registrationStart: string
-  registrationEnd: string
   eventStart: string
   eventEnd: string
-  status: string
-  currentParticipants: number
-  maxParticipants: number | null
+  registrationCount: number
 }
 
 export function OrganizerCompetitions({ userId }: { userId: string }) {
-  const [competitions, setCompetitions] = useState<Competition[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [items, setItems] = useState<Competition[]>([])
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchCompetitions = async () => {
+    const fetchList = async () => {
       try {
-        const response = await fetch(`/api/organizer/competitions?userId=${userId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setCompetitions(data)
-        } else {
-          throw new Error("Failed to fetch competitions")
-        }
-      } catch (error) {
-        console.error("Error fetching competitions:", error)
+        setLoading(true)
+        const res = await fetch(
+          `/api/organizer/competitions?organizerId=${encodeURIComponent(userId)}`,
+          { cache: "no-store" }
+        )
+        if (!res.ok) throw new Error(`Status ${res.status}`)
+        const data: Competition[] = await res.json()
+        setItems(data)
+      } catch (err) {
+        console.error(err)
         toast({
           title: "Ошибка",
           description: "Не удалось загрузить соревнования",
           variant: "destructive",
         })
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
-
-    fetchCompetitions()
+    fetchList()
   }, [userId, toast])
 
-  const handleDelete = async () => {
-    if (!deleteId) return
-
+  const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/competitions/${deleteId}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        setCompetitions((prev) => prev.filter((comp) => comp.id !== deleteId))
-        toast({
-          title: "Успешно",
-          description: "Соревнование удалено",
-        })
-      } else {
-        throw new Error("Failed to delete competition")
-      }
-    } catch (error) {
-      console.error("Error deleting competition:", error)
+      const res = await fetch(`/api/competitions/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error()
+      setItems((prev) => prev.filter((c) => c.id !== id))
+      toast({ title: "Соревнование удалено" })
+    } catch {
       toast({
         title: "Ошибка",
         description: "Не удалось удалить соревнование",
         variant: "destructive",
       })
-    } finally {
-      setDeleteId(null)
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "REGISTRATION_OPEN":
-        return <Badge variant="default">Открыта регистрация</Badge>
-      case "REGISTRATION_CLOSED":
-        return <Badge variant="secondary">Регистрация закрыта</Badge>
-      case "IN_PROGRESS":
-        return (
-          <Badge variant="default" className="bg-green-600">
-            Идет соревнование
-          </Badge>
-        )
-      case "COMPLETED":
-        return <Badge variant="outline">Завершено</Badge>
-      case "DRAFT":
-        return <Badge variant="outline">Черновик</Badge>
-      case "MODERATION":
-        return <Badge variant="secondary">На модерации</Badge>
-      case "CANCELLED":
-        return <Badge variant="destructive">Отменено</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
-  const getTypeBadge = (type: "OPEN" | "REGIONAL" | "FEDERAL") => {
-    switch (type) {
-      case "FEDERAL":
-        return <Badge variant="default">Федеральное</Badge>
-      case "REGIONAL":
-        return <Badge variant="secondary">Региональное</Badge>
-      case "OPEN":
-        return <Badge variant="outline">Открытое</Badge>
-      default:
-        return <Badge variant="outline">{type}</Badge>
-    }
-  }
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <div className="border rounded-md">
-          <div className="p-4">
-            <Skeleton className="h-10 w-full" />
-          </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border-t">
-              <div className="flex justify-between">
-                <Skeleton className="h-6 w-1/3" />
-                <Skeleton className="h-6 w-1/4" />
-              </div>
-              <div className="mt-2 flex gap-2">
-                <Skeleton className="h-4 w-1/5" />
-                <Skeleton className="h-4 w-1/5" />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
       </div>
     )
   }
 
-  if (competitions.length === 0) {
+  if (items.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-xl font-bold mb-2">У вас пока нет соревнований</h3>
-        <p className="text-muted-foreground mb-6">Создайте свое первое соревнование прямо сейчас</p>
-        <Link href="/organizer?tab=create">
-          <Button>Создать соревнование</Button>
-        </Link>
+      <div className="text-center text-muted-foreground">
+        У вас пока нет соревнований
+        <div className="mt-4">
+          <Link href="/competitions/create">
+            <Button>Создать соревнование</Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Мои соревнования</h3>
-        <Link href="/organizer?tab=create">
-          <Button>Создать соревнование</Button>
-        </Link>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Название</TableHead>
-            <TableHead>Тип</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Даты проведения</TableHead>
-            <TableHead>Участники</TableHead>
-            <TableHead className="text-right">Действия</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {competitions.map((competition) => (
-            <TableRow key={competition.id}>
-              <TableCell className="font-medium">{competition.title}</TableCell>
-              <TableCell>{getTypeBadge(competition.type)}</TableCell>
-              <TableCell>{getStatusBadge(competition.status)}</TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center text-sm">
-                    <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                    <span>
-                      {new Date(competition.eventStart).toLocaleDateString()} -{" "}
-                      {new Date(competition.eventEnd).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                    <span>{competition.region}</span>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                  <span>
-                    {competition.currentParticipants} / {competition.maxParticipants || "∞"}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Link href={`/competitions/${competition.id}`}>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">Просмотр</span>
-                    </Button>
-                  </Link>
-                  <Link href={`/organizer/competitions/${competition.id}/edit`}>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Редактировать</span>
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteId(competition.id)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Удалить</span>
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Название</TableHead>
+          <TableHead>Тип</TableHead>
+          <TableHead>Дисциплина</TableHead>
+          <TableHead>Дата</TableHead>
+          <TableHead>Участники</TableHead>
+          <TableHead className="text-right">Действия</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((c) => (
+          <TableRow key={c.id}>
+            <TableCell>{c.title}</TableCell>
+            <TableCell>{c.type}</TableCell>
+            <TableCell>{c.discipline}</TableCell>
+            <TableCell>
+              <Calendar className="inline-block mr-1 h-4 w-4 text-muted-foreground" />
+              {new Date(c.eventStart).toLocaleDateString()}–{" "}
+              {new Date(c.eventEnd).toLocaleDateString()}
+            </TableCell>
+            <TableCell>
+              <Users className="inline-block mr-1 h-4 w-4 text-muted-foreground" />
+              {c.registrationCount}
+            </TableCell>
+            <TableCell className="text-right space-x-2">
+              <Link href={`/competitions/${c.id}`}>
+                <Button size="icon" variant="ghost" title="Просмотр">
+                  <Eye size={16} />
+                </Button>
+              </Link>
+              <Link href={`/competitions/${c.id}/edit`}>
+                <Button size="icon" variant="ghost" title="Редактировать">
+                  <Edit size={16} />
+                </Button>
+              </Link>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Это действие нельзя отменить. Соревнование будет удалено вместе со всеми связанными данными.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Удалить
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              {/* Correct AlertDialog structure */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="icon" variant="ghost" title="Удалить">
+                    <Trash2 size={16} />
+                  </Button>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Удалить соревнование?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Это действие нельзя отменить. Все данные будут безвозвратно удалены.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground"
+                      onClick={() => handleDelete(c.id)}
+                    >
+                      Удалить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
